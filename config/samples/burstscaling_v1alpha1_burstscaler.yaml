@@ -1,0 +1,35 @@
+apiVersion: burstscaling.io/v1alpha1
+kind: BurstScaler
+metadata:
+  name: my-worker-burst
+  labels:
+    app.kubernetes.io/name: burst-scaling-operator
+    app.kubernetes.io/managed-by: kustomize
+spec:
+  rabbitmq:
+    secretRef:
+      name: rabbitmq-credentials
+      key: amqp-uri
+    # Optional: HTTP API secret for KEDA (if different from AMQP)
+    # httpSecretRef:
+    #   name: rabbitmq-credentials
+    #   key: http-uri
+  source:
+    exchange: events
+    routingKey: jobs.high-priority
+    # Optional: custom queue name (defaults to "burst-<name>-source")
+    # queueName: my-custom-source-queue
+  burst:
+    count: 10                # messages to publish = max replicas
+    messageTTLSeconds: 120   # scale-down delay
+    # Optional: custom queue name (defaults to "burst-<name>-target")
+    # targetQueueName: my-custom-target-queue
+  target:
+    scaleTargetRef:
+      name: my-worker
+      # kind: Deployment       # default
+      # apiVersion: apps/v1    # default
+    # minReplicaCount: 0       # default
+    # maxReplicaCount: 10      # defaults to burst.count
+    cooldownPeriod: 60
+    pollingInterval: 5

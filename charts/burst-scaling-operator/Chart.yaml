@@ -1,0 +1,19 @@
+apiVersion: v2
+name: burst-scaling-operator
+description: A Kubernetes operator that bridges RabbitMQ events to KEDA-based pod autoscaling
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - kubernetes
+  - operator
+  - keda
+  - rabbitmq
+  - autoscaling
+  - burst-scaling
+home: https://github.com/rapidataai/burst-scaling-operator
+sources:
+  - https://github.com/rapidataai/burst-scaling-operator
+maintainers:
+  - name: rapidataai
+kubeVersion: ">=1.25.0-0"

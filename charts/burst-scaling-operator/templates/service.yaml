@@ -1,0 +1,18 @@
+{{- if .Values.metrics.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "burst-scaling-operator.fullname" . }}-metrics
+  labels:
+    {{- include "burst-scaling-operator.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: metrics
+      protocol: TCP
+      name: metrics
+  selector:
+    {{- include "burst-scaling-operator.selectorLabels" . | nindent 4 }}
+    control-plane: controller-manager
+{{- end }}

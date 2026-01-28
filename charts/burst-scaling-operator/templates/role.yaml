@@ -1,0 +1,21 @@
+{{- if .Values.leaderElection.enabled }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "burst-scaling-operator.fullname" . }}-leader-election-role
+  labels:
+    {{- include "burst-scaling-operator.labels" . | nindent 4 }}
+rules:
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+{{- end }}

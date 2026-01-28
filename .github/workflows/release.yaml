@@ -1,0 +1,229 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (skip tag/push/release)'
+        required: false
+        default: 'false'
+        type: boolean
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Get current version
+        id: current_version
+        run: |
+          # Get the latest tag, default to v0.0.0 if none exists
+          CURRENT_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          echo "Current version: $CURRENT_TAG"
+          echo "version=$CURRENT_TAG" >> $GITHUB_OUTPUT
+
+      - name: Calculate next version
+        id: next_version
+        run: |
+          CURRENT="${{ steps.current_version.outputs.version }}"
+          # Remove 'v' prefix for semver calculation
+          CURRENT_CLEAN="${CURRENT#v}"
+
+          # Parse current version
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_CLEAN"
+          MAJOR=${MAJOR:-0}
+          MINOR=${MINOR:-0}
+          PATCH=${PATCH:-0}
+
+          # Get commits since last tag
+          if [ "$CURRENT" = "v0.0.0" ]; then
+            COMMITS=$(git log --oneline --pretty=format:"%s")
+          else
+            COMMITS=$(git log ${CURRENT}..HEAD --oneline --pretty=format:"%s")
+          fi
+
+          echo "Commits since $CURRENT:"
+          echo "$COMMITS"
+
+          # Determine bump type from conventional commits
+          BUMP="patch"
+
+          if echo "$COMMITS" | grep -qiE "^feat(\(.+\))?!:|BREAKING CHANGE:"; then
+            BUMP="major"
+          elif echo "$COMMITS" | grep -qiE "^feat(\(.+\))?:"; then
+            BUMP="minor"
+          elif echo "$COMMITS" | grep -qiE "^fix(\(.+\))?:"; then
+            BUMP="patch"
+          fi
+
+          echo "Bump type: $BUMP"
+
+          # Calculate new version
+          case $BUMP in
+            major)
+              MAJOR=$((MAJOR + 1))
+              MINOR=0
+              PATCH=0
+              ;;
+            minor)
+              MINOR=$((MINOR + 1))
+              PATCH=0
+              ;;
+            patch)
+              PATCH=$((PATCH + 1))
+              ;;
+          esac
+
+          NEW_VERSION="v${MAJOR}.${MINOR}.${PATCH}"
+          echo "New version: $NEW_VERSION"
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "version_clean=${MAJOR}.${MINOR}.${PATCH}" >> $GITHUB_OUTPUT
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          CURRENT="${{ steps.current_version.outputs.version }}"
+
+          # Generate changelog from conventional commits
+          {
+            echo "## What's Changed"
+            echo ""
+
+            if [ "$CURRENT" = "v0.0.0" ]; then
+              RANGE="HEAD"
+            else
+              RANGE="${CURRENT}..HEAD"
+            fi
+
+            # Features
+            FEATURES=$(git log $RANGE --oneline --pretty=format:"%s" | grep -iE "^feat(\(.+\))?:" | sed 's/^feat(\(.*\)):/\*\*\1:\*\*/' | sed 's/^feat://' || true)
+            if [ -n "$FEATURES" ]; then
+              echo "### Features"
+              echo "$FEATURES" | while read -r line; do echo "- $line"; done
+              echo ""
+            fi
+
+            # Bug Fixes
+            FIXES=$(git log $RANGE --oneline --pretty=format:"%s" | grep -iE "^fix(\(.+\))?:" | sed 's/^fix(\(.*\)):/\*\*\1:\*\*/' | sed 's/^fix://' || true)
+            if [ -n "$FIXES" ]; then
+              echo "### Bug Fixes"
+              echo "$FIXES" | while read -r line; do echo "- $line"; done
+              echo ""
+            fi
+
+            # Other changes
+            OTHERS=$(git log $RANGE --oneline --pretty=format:"%s" | grep -viE "^(feat|fix)(\(.+\))?:" || true)
+            if [ -n "$OTHERS" ]; then
+              echo "### Other Changes"
+              echo "$OTHERS" | while read -r line; do echo "- $line"; done
+              echo ""
+            fi
+          } > changelog.md
+
+          cat changelog.md
+          echo "changelog_file=changelog.md" >> $GITHUB_OUTPUT
+
+      - name: Update Helm chart version
+        run: |
+          VERSION="${{ steps.next_version.outputs.version_clean }}"
+
+          # Update Chart.yaml
+          sed -i "s/^version:.*/version: ${VERSION}/" charts/burst-scaling-operator/Chart.yaml
+          sed -i "s/^appVersion:.*/appVersion: \"${VERSION}\"/" charts/burst-scaling-operator/Chart.yaml
+
+          echo "Updated Chart.yaml:"
+          cat charts/burst-scaling-operator/Chart.yaml
+
+      - name: Run tests
+        run: make test
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        if: ${{ inputs.dry_run != true }}
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=${{ steps.next_version.outputs.version }}
+            type=raw,value=latest
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: ${{ inputs.dry_run != true }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Commit version changes
+        if: ${{ inputs.dry_run != true }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add charts/burst-scaling-operator/Chart.yaml
+          git commit -m "chore: release ${{ steps.next_version.outputs.version }}" || echo "No changes to commit"
+          git push
+
+      - name: Create and push tag
+        if: ${{ inputs.dry_run != true }}
+        run: |
+          git tag ${{ steps.next_version.outputs.version }}
+          git push origin ${{ steps.next_version.outputs.version }}
+
+      - name: Create GitHub Release
+        if: ${{ inputs.dry_run != true }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.next_version.outputs.version }}
+          name: ${{ steps.next_version.outputs.version }}
+          body_path: changelog.md
+          draft: false
+          prerelease: false
+          generate_release_notes: false
+
+      - name: Summary
+        run: |
+          echo "## Release Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** ${{ steps.next_version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Image:** \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.next_version.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            echo "⚠️ **This was a dry run - no changes were pushed**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "✅ **Release published successfully**" >> $GITHUB_STEP_SUMMARY
+          fi

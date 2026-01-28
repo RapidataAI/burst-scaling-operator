@@ -1,0 +1,495 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.20.0
+  name: triggerauthentications.
+spec:
+  group: ""
+  names:
+    kind: TriggerAuthentication
+    listKind: TriggerAuthenticationList
+    plural: triggerauthentications
+    shortNames:
+    - ta
+    singular: triggerauthentication
+  scope: Namespaced
+  versions:
+  - name: ""
+    schema:
+      openAPIV3Schema:
+        description: TriggerAuthentication defines how a trigger can authenticate.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: TriggerAuthenticationSpec defines the various ways to authenticate.
+            properties:
+              awsSecretManager:
+                description: AwsSecretManager references an AWS Secrets Manager secret.
+                properties:
+                  credentials:
+                    description: Credentials are the AWS credentials.
+                    properties:
+                      accessKey:
+                        description: AccessKey is the access key.
+                        properties:
+                          key:
+                            description: Key is the key in the secret.
+                            type: string
+                          name:
+                            description: Name is the name of the secret.
+                            type: string
+                          parameter:
+                            description: Parameter is the name of the parameter to
+                              set.
+                            type: string
+                        required:
+                        - key
+                        - name
+                        - parameter
+                        type: object
+                      accessSecretKey:
+                        description: AccessSecretKey is the secret access key.
+                        properties:
+                          key:
+                            description: Key is the key in the secret.
+                            type: string
+                          name:
+                            description: Name is the name of the secret.
+                            type: string
+                          parameter:
+                            description: Parameter is the name of the parameter to
+                              set.
+                            type: string
+                        required:
+                        - key
+                        - name
+                        - parameter
+                        type: object
+                      accessToken:
+                        description: AccessToken is the session token.
+                        properties:
+                          key:
+                            description: Key is the key in the secret.
+                            type: string
+                          name:
+                            description: Name is the name of the secret.
+                            type: string
+                          parameter:
+                            description: Parameter is the name of the parameter to
+                              set.
+                            type: string
+                        required:
+                        - key
+                        - name
+                        - parameter
+                        type: object
+                    required:
+                    - accessKey
+                    - accessSecretKey
+                    type: object
+                  podIdentity:
+                    description: PodIdentity is the pod identity.
+                    properties:
+                      identityId:
+                        description: IdentityID is the identity ID.
+                        type: string
+                      identityOwner:
+                        description: IdentityOwner is the owner of the identity.
+                        type: string
+                      identityTenantId:
+                        description: IdentityTenantID is the tenant ID.
+                        type: string
+                      provider:
+                        description: Provider is the pod identity provider.
+                        type: string
+                      roleArn:
+                        description: RoleArn is the AWS role ARN.
+                        type: string
+                    required:
+                    - provider
+                    type: object
+                  region:
+                    description: Region is the AWS region.
+                    type: string
+                  secrets:
+                    description: Secrets is the list of secrets to retrieve.
+                    items:
+                      description: AwsSecretManagerSecret represents an AWS Secrets
+                        Manager secret.
+                      properties:
+                        name:
+                          description: Name is the name of the secret.
+                          type: string
+                        parameter:
+                          description: Parameter is the name of the parameter to set.
+                          type: string
+                        versionId:
+                          description: VersionID is the version ID.
+                          type: string
+                        versionStage:
+                          description: VersionStage is the version stage.
+                          type: string
+                      required:
+                      - name
+                      - parameter
+                      type: object
+                    type: array
+                required:
+                - secrets
+                type: object
+              azureKeyVault:
+                description: AzureKeyVault references an Azure Key Vault secret.
+                properties:
+                  cloud:
+                    description: Cloud is the Azure cloud.
+                    properties:
+                      activeDirectoryEndpoint:
+                        description: ActiveDirectoryEndpoint is the Active Directory
+                          endpoint.
+                        type: string
+                      keyVaultResourceURL:
+                        description: KeyVaultResourceURL is the Key Vault resource
+                          URL.
+                        type: string
+                      type:
+                        description: Type is the cloud type.
+                        type: string
+                    required:
+                    - type
+                    type: object
+                  credentials:
+                    description: Credentials are the Azure credentials.
+                    properties:
+                      clientId:
+                        description: ClientID is the client ID.
+                        type: string
+                      clientSecret:
+                        description: ClientSecret is the client secret.
+                        properties:
+                          key:
+                            description: Key is the key in the secret.
+                            type: string
+                          name:
+                            description: Name is the name of the secret.
+                            type: string
+                          parameter:
+                            description: Parameter is the name of the parameter to
+                              set.
+                            type: string
+                        required:
+                        - key
+                        - name
+                        - parameter
+                        type: object
+                      tenantId:
+                        description: TenantID is the tenant ID.
+                        type: string
+                    required:
+                    - clientId
+                    - clientSecret
+                    - tenantId
+                    type: object
+                  podIdentity:
+                    description: PodIdentity is the pod identity.
+                    properties:
+                      identityId:
+                        description: IdentityID is the identity ID.
+                        type: string
+                      identityOwner:
+                        description: IdentityOwner is the owner of the identity.
+                        type: string
+                      identityTenantId:
+                        description: IdentityTenantID is the tenant ID.
+                        type: string
+                      provider:
+                        description: Provider is the pod identity provider.
+                        type: string
+                      roleArn:
+                        description: RoleArn is the AWS role ARN.
+                        type: string
+                    required:
+                    - provider
+                    type: object
+                  secrets:
+                    description: Secrets is the list of secrets to retrieve.
+                    items:
+                      description: AzureKeyVaultSecret represents an Azure Key Vault
+                        secret.
+                      properties:
+                        name:
+                          description: Name is the name of the secret.
+                          type: string
+                        parameter:
+                          description: Parameter is the name of the parameter to set.
+                          type: string
+                        version:
+                          description: Version is the version of the secret.
+                          type: string
+                      required:
+                      - name
+                      - parameter
+                      type: object
+                    type: array
+                  vaultUri:
+                    description: VaultURI is the Azure Key Vault URI.
+                    type: string
+                required:
+                - secrets
+                - vaultUri
+                type: object
+              configMapTargetRef:
+                description: ConfigMapTargetRef references ConfigMap entries containing
+                  credentials.
+                items:
+                  description: AuthConfigMapTargetRef references a ConfigMap entry.
+                  properties:
+                    key:
+                      description: Key is the key in the ConfigMap.
+                      type: string
+                    name:
+                      description: Name is the name of the ConfigMap.
+                      type: string
+                    parameter:
+                      description: Parameter is the name of the parameter to set.
+                      type: string
+                  required:
+                  - key
+                  - name
+                  - parameter
+                  type: object
+                type: array
+              env:
+                description: Env references environment variables on the container.
+                items:
+                  description: AuthEnvironment references an environment variable.
+                  properties:
+                    containerName:
+                      description: ContainerName is the name of the container.
+                      type: string
+                    name:
+                      description: Name is the name of the env var.
+                      type: string
+                    parameter:
+                      description: Parameter is the name of the parameter to set.
+                      type: string
+                  required:
+                  - name
+                  - parameter
+                  type: object
+                type: array
+              gcpSecretManager:
+                description: GCPSecretManager references a GCP Secret Manager secret.
+                properties:
+                  credentials:
+                    description: Credentials are the GCP credentials.
+                    properties:
+                      clientSecret:
+                        description: ClientSecret is the client secret.
+                        properties:
+                          key:
+                            description: Key is the key in the secret.
+                            type: string
+                          name:
+                            description: Name is the name of the secret.
+                            type: string
+                          parameter:
+                            description: Parameter is the name of the parameter to
+                              set.
+                            type: string
+                        required:
+                        - key
+                        - name
+                        - parameter
+                        type: object
+                    required:
+                    - clientSecret
+                    type: object
+                  podIdentity:
+                    description: PodIdentity is the pod identity.
+                    properties:
+                      identityId:
+                        description: IdentityID is the identity ID.
+                        type: string
+                      identityOwner:
+                        description: IdentityOwner is the owner of the identity.
+                        type: string
+                      identityTenantId:
+                        description: IdentityTenantID is the tenant ID.
+                        type: string
+                      provider:
+                        description: Provider is the pod identity provider.
+                        type: string
+                      roleArn:
+                        description: RoleArn is the AWS role ARN.
+                        type: string
+                    required:
+                    - provider
+                    type: object
+                  secrets:
+                    description: Secrets is the list of secrets to retrieve.
+                    items:
+                      description: GCPSecretManagerSecret represents a GCP Secret
+                        Manager secret.
+                      properties:
+                        id:
+                          description: ID is the ID of the secret.
+                          type: string
+                        parameter:
+                          description: Parameter is the name of the parameter to set.
+                          type: string
+                        version:
+                          description: Version is the version of the secret.
+                          type: string
+                      required:
+                      - id
+                      - parameter
+                      type: object
+                    type: array
+                required:
+                - secrets
+                type: object
+              hashiCorpVault:
+                description: HashiCorpVault references a HashiCorp Vault secret.
+                properties:
+                  address:
+                    description: Address is the Vault address.
+                    type: string
+                  authentication:
+                    description: Authentication is the authentication method.
+                    type: string
+                  credential:
+                    description: Credential is the credential for authentication.
+                    properties:
+                      serviceAccount:
+                        description: ServiceAccount is the service account.
+                        type: string
+                      token:
+                        description: Token is the token.
+                        type: string
+                    type: object
+                  mount:
+                    description: Mount is the auth mount path.
+                    type: string
+                  namespace:
+                    description: Namespace is the Vault namespace.
+                    type: string
+                  role:
+                    description: Role is the Vault role.
+                    type: string
+                  secrets:
+                    description: Secrets is the list of secrets to retrieve.
+                    items:
+                      description: VaultSecret represents a Vault secret.
+                      properties:
+                        key:
+                          description: Key is the key in the secret.
+                          type: string
+                        parameter:
+                          description: Parameter is the name of the parameter to set.
+                          type: string
+                        path:
+                          description: Path is the path to the secret.
+                          type: string
+                        pkiData:
+                          description: PKIData is the PKI data.
+                          properties:
+                            altNames:
+                              description: AltNames is the list of alternative names.
+                              type: string
+                            commonName:
+                              description: CommonName is the common name.
+                              type: string
+                            format:
+                              description: Format is the format.
+                              type: string
+                            ipSans:
+                              description: IPSans is the list of IP SANs.
+                              type: string
+                            ttl:
+                              description: TTL is the TTL.
+                              type: string
+                            uriSans:
+                              description: URISans is the list of URI SANs.
+                              type: string
+                          type: object
+                        type:
+                          description: Type is the type of secret.
+                          type: string
+                      required:
+                      - key
+                      - parameter
+                      - path
+                      type: object
+                    type: array
+                required:
+                - address
+                - authentication
+                - secrets
+                type: object
+              podIdentity:
+                description: PodIdentity allows you to use pod identity providers.
+                properties:
+                  identityId:
+                    description: IdentityID is the identity ID.
+                    type: string
+                  identityOwner:
+                    description: IdentityOwner is the owner of the identity.
+                    type: string
+                  identityTenantId:
+                    description: IdentityTenantID is the tenant ID.
+                    type: string
+                  provider:
+                    description: Provider is the pod identity provider.
+                    type: string
+                  roleArn:
+                    description: RoleArn is the AWS role ARN.
+                    type: string
+                required:
+                - provider
+                type: object
+              secretTargetRef:
+                description: SecretTargetRef references Kubernetes secrets containing
+                  credentials.
+                items:
+                  description: AuthSecretTargetRef references a Kubernetes secret
+                    containing credentials.
+                  properties:
+                    key:
+                      description: Key is the key in the secret.
+                      type: string
+                    name:
+                      description: Name is the name of the secret.
+                      type: string
+                    parameter:
+                      description: Parameter is the name of the parameter to set.
+                      type: string
+                  required:
+                  - key
+                  - name
+                  - parameter
+                  type: object
+                type: array
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true

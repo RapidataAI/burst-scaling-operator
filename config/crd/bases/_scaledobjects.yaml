@@ -1,0 +1,366 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.20.0
+  name: scaledobjects.
+spec:
+  group: ""
+  names:
+    kind: ScaledObject
+    listKind: ScaledObjectList
+    plural: scaledobjects
+    shortNames:
+    - so
+    singular: scaledobject
+  scope: Namespaced
+  versions:
+  - name: ""
+    schema:
+      openAPIV3Schema:
+        description: ScaledObject is a KEDA resource that defines how to scale a workload.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ScaledObjectSpec defines the desired state of ScaledObject.
+            properties:
+              advanced:
+                description: Advanced holds advanced configuration options.
+                properties:
+                  horizontalPodAutoscalerConfig:
+                    description: HorizontalPodAutoscalerConfig holds the HPA configuration.
+                    properties:
+                      behavior:
+                        description: Behavior configures the scaling behavior of the
+                          target.
+                        properties:
+                          scaleDown:
+                            description: ScaleDown is scaling policy for scaling Down.
+                            properties:
+                              policies:
+                                description: Policies is a list of potential scaling
+                                  polices which can be used during scaling.
+                                items:
+                                  description: HPAScalingPolicy is a single policy
+                                    which must hold true for a specified past interval.
+                                  properties:
+                                    periodSeconds:
+                                      description: PeriodSeconds specifies the window
+                                        of time for which the policy should hold true.
+                                      format: int32
+                                      type: integer
+                                    type:
+                                      description: Type is used to specify the scaling
+                                        policy.
+                                      type: string
+                                    value:
+                                      description: Value contains the amount of change
+                                        which is permitted by the policy.
+                                      format: int32
+                                      type: integer
+                                  required:
+                                  - periodSeconds
+                                  - type
+                                  - value
+                                  type: object
+                                type: array
+                              selectPolicy:
+                                description: SelectPolicy is used to specify which
+                                  policy should be used.
+                                type: string
+                              stabilizationWindowSeconds:
+                                description: |-
+                                  StabilizationWindowSeconds is the number of seconds for which past recommendations should be
+                                  considered while scaling up or scaling down.
+                                format: int32
+                                type: integer
+                            type: object
+                          scaleUp:
+                            description: ScaleUp is scaling policy for scaling Up.
+                            properties:
+                              policies:
+                                description: Policies is a list of potential scaling
+                                  polices which can be used during scaling.
+                                items:
+                                  description: HPAScalingPolicy is a single policy
+                                    which must hold true for a specified past interval.
+                                  properties:
+                                    periodSeconds:
+                                      description: PeriodSeconds specifies the window
+                                        of time for which the policy should hold true.
+                                      format: int32
+                                      type: integer
+                                    type:
+                                      description: Type is used to specify the scaling
+                                        policy.
+                                      type: string
+                                    value:
+                                      description: Value contains the amount of change
+                                        which is permitted by the policy.
+                                      format: int32
+                                      type: integer
+                                  required:
+                                  - periodSeconds
+                                  - type
+                                  - value
+                                  type: object
+                                type: array
+                              selectPolicy:
+                                description: SelectPolicy is used to specify which
+                                  policy should be used.
+                                type: string
+                              stabilizationWindowSeconds:
+                                description: |-
+                                  StabilizationWindowSeconds is the number of seconds for which past recommendations should be
+                                  considered while scaling up or scaling down.
+                                format: int32
+                                type: integer
+                            type: object
+                        type: object
+                      name:
+                        description: Name of the HPA resource.
+                        type: string
+                    type: object
+                  restoreToOriginalReplicaCount:
+                    description: RestoreToOriginalReplicaCount specifies whether to
+                      restore replicas on deletion.
+                    type: boolean
+                  scalingModifiers:
+                    description: ScalingModifiers holds the scaling modifiers configuration.
+                    properties:
+                      activationTarget:
+                        description: ActivationTarget is the activation target of
+                          the trigger's metric.
+                        type: string
+                      formula:
+                        description: Formula is used to specify a formula to calculate
+                          the metric.
+                        type: string
+                      metricType:
+                        description: MetricType is the type of metric to use.
+                        type: string
+                      target:
+                        description: Target is the desired count of the trigger's
+                          metric target.
+                        type: string
+                    type: object
+                type: object
+              cooldownPeriod:
+                description: CooldownPeriod is the period to wait after the last trigger
+                  reported active before scaling to 0.
+                format: int32
+                type: integer
+              fallback:
+                description: Fallback is the config for specifying the fallback behavior.
+                properties:
+                  failureThreshold:
+                    description: FailureThreshold is the number of times a trigger
+                      must fail before using the fallback.
+                    format: int32
+                    type: integer
+                  replicas:
+                    description: Replicas is the number of replicas to fallback to.
+                    format: int32
+                    type: integer
+                required:
+                - failureThreshold
+                - replicas
+                type: object
+              idleReplicaCount:
+                description: IdleReplicaCount is the number of replicas KEDA will
+                  keep when no triggers are active.
+                format: int32
+                type: integer
+              maxReplicaCount:
+                description: MaxReplicaCount is the maximum number of replicas KEDA
+                  will scale the resource up to.
+                format: int32
+                type: integer
+              minReplicaCount:
+                description: MinReplicaCount is the minimum number of replicas KEDA
+                  will scale the resource down to.
+                format: int32
+                type: integer
+              pollingInterval:
+                description: PollingInterval is the interval to check each trigger
+                  on.
+                format: int32
+                type: integer
+              scaleTargetRef:
+                description: ScaleTargetRef holds reference to the target resource.
+                properties:
+                  apiVersion:
+                    description: APIVersion of the target resource.
+                    type: string
+                  envSourceContainerName:
+                    description: EnvSourceContainerName specifies the name of the
+                      container from which to get env vars for scaling.
+                    type: string
+                  kind:
+                    description: Kind of the target resource.
+                    type: string
+                  name:
+                    description: Name of the target resource.
+                    type: string
+                required:
+                - name
+                type: object
+              triggers:
+                description: Triggers is a list of triggers to activate scaling of
+                  the target resource.
+                items:
+                  description: ScaleTriggers reference the scaler that will be used.
+                  properties:
+                    authenticationRef:
+                      description: AuthenticationRef references the TriggerAuthentication.
+                      properties:
+                        kind:
+                          description: Kind of the auth resource (TriggerAuthentication
+                            or ClusterTriggerAuthentication).
+                          type: string
+                        name:
+                          description: Name of the TriggerAuthentication.
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    metadata:
+                      additionalProperties:
+                        type: string
+                      description: Metadata contains the trigger configuration.
+                      type: object
+                    metricType:
+                      description: MetricType is the type of metric to use.
+                      type: string
+                    name:
+                      description: Name is the name of the trigger.
+                      type: string
+                    type:
+                      description: Type is the type of trigger.
+                      type: string
+                    useCachedMetrics:
+                      description: UseCachedMetrics enables caching of metrics.
+                      type: boolean
+                  required:
+                  - metadata
+                  - type
+                  type: object
+                type: array
+            required:
+            - scaleTargetRef
+            - triggers
+            type: object
+          status:
+            description: ScaledObjectStatus defines the observed state of ScaledObject.
+            properties:
+              compositeScalerName:
+                description: CompositeScalerName is the name of the composite scaler.
+                type: string
+              conditions:
+                description: Conditions contains the conditions of the ScaledObject.
+                items:
+                  description: Condition contains details for the current condition.
+                  properties:
+                    message:
+                      description: Message is a human-readable message indicating
+                        details about the transition.
+                      type: string
+                    reason:
+                      description: Reason is a brief reason for the condition's last
+                        transition.
+                      type: string
+                    status:
+                      description: Status is the status of the condition.
+                      type: string
+                    type:
+                      description: Type is the type of the condition.
+                      type: string
+                  required:
+                  - status
+                  - type
+                  type: object
+                type: array
+              externalMetricNames:
+                description: ExternalMetricNames contains the names of the external
+                  metrics.
+                items:
+                  type: string
+                type: array
+              health:
+                additionalProperties:
+                  description: HealthStatus represents the health status of a trigger.
+                  properties:
+                    numberOfFailures:
+                      description: NumberOfFailures is the number of consecutive failures.
+                      format: int32
+                      type: integer
+                    status:
+                      description: Status represents the current health status.
+                      type: string
+                  type: object
+                description: Health contains the health status of each trigger.
+                type: object
+              hpaName:
+                description: HpaName is the name of the HPA created by KEDA.
+                type: string
+              lastActiveTime:
+                description: LastActiveTime is the last time a trigger was active.
+                format: date-time
+                type: string
+              originalReplicaCount:
+                description: OriginalReplicaCount is the original replica count of
+                  the target.
+                format: int32
+                type: integer
+              pausedReplicaCount:
+                description: PausedReplicaCount is the replica count when paused.
+                format: int32
+                type: integer
+              resourceMetricNames:
+                description: ResourceMetricNames contains the names of the resource
+                  metrics.
+                items:
+                  type: string
+                type: array
+              scaleTargetGVKR:
+                description: ScaleTargetGVKR is the GroupVersionKindResource of the
+                  target.
+                properties:
+                  group:
+                    type: string
+                  kind:
+                    type: string
+                  resource:
+                    type: string
+                  version:
+                    type: string
+                required:
+                - group
+                - kind
+                - resource
+                - version
+                type: object
+              scaleTargetKind:
+                description: ScaleTargetKind is the kind of the target resource.
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
