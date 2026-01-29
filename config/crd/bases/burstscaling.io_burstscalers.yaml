@@ -81,21 +81,6 @@ spec:
               rabbitmq:
                 description: RabbitMQ contains the RabbitMQ connection configuration.
                 properties:
-                  httpSecretRef:
-                    description: |-
-                      HTTPSecretRef optionally references a secret containing the RabbitMQ HTTP API URI.
-                      Used by KEDA for queue length monitoring. If not specified, derived from AMQP URI.
-                    properties:
-                      key:
-                        description: Key is the key within the secret.
-                        type: string
-                      name:
-                        description: Name is the name of the secret.
-                        type: string
-                    required:
-                    - key
-                    - name
-                    type: object
                   secretRef:
                     description: SecretRef references a secret containing the AMQP
                       URI.
@@ -132,64 +117,10 @@ spec:
                 - exchange
                 - routingKey
                 type: object
-              target:
-                description: Target defines the scaling target configuration.
-                properties:
-                  cooldownPeriod:
-                    description: |-
-                      CooldownPeriod is the period to wait after the last trigger reported active before scaling to minReplicaCount.
-                      Defaults to 300 seconds.
-                    format: int32
-                    minimum: 0
-                    type: integer
-                  maxReplicaCount:
-                    description: |-
-                      MaxReplicaCount is the maximum number of replicas.
-                      Defaults to burst.count.
-                    format: int32
-                    minimum: 1
-                    type: integer
-                  minReplicaCount:
-                    description: |-
-                      MinReplicaCount is the minimum number of replicas.
-                      Defaults to 0.
-                    format: int32
-                    minimum: 0
-                    type: integer
-                  pollingInterval:
-                    description: |-
-                      PollingInterval is the interval in seconds to check each trigger on.
-                      Defaults to 5 seconds.
-                    format: int32
-                    minimum: 1
-                    type: integer
-                  scaleTargetRef:
-                    description: ScaleTargetRef identifies the resource to scale.
-                    properties:
-                      apiVersion:
-                        description: |-
-                          APIVersion is the API version of the resource to scale.
-                          Defaults to "apps/v1".
-                        type: string
-                      kind:
-                        description: |-
-                          Kind is the kind of the resource to scale.
-                          Defaults to "Deployment".
-                        type: string
-                      name:
-                        description: Name is the name of the resource to scale.
-                        type: string
-                    required:
-                    - name
-                    type: object
-                required:
-                - scaleTargetRef
-                type: object
             required:
             - burst
             - rabbitmq
             - source
-            - target
             type: object
           status:
             description: Status defines the observed state of BurstScaler.

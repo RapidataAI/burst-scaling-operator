@@ -33,10 +33,6 @@ type BurstScalerSpec struct {
 	// Burst defines the burst publishing configuration.
 	// +required
 	Burst BurstConfig `json:"burst"`
-
-	// Target defines the scaling target configuration.
-	// +required
-	Target TargetConfig `json:"target"`
 }
 
 // RabbitMQConfig contains the RabbitMQ connection configuration.
@@ -44,11 +40,6 @@ type RabbitMQConfig struct {
 	// SecretRef references a secret containing the AMQP URI.
 	// +required
 	SecretRef SecretReference `json:"secretRef"`
-
-	// HTTPSecretRef optionally references a secret containing the RabbitMQ HTTP API URI.
-	// Used by KEDA for queue length monitoring. If not specified, derived from AMQP URI.
-	// +optional
-	HTTPSecretRef *SecretReference `json:"httpSecretRef,omitempty"`
 }
 
 // SecretReference references a key in a Secret.
@@ -98,54 +89,6 @@ type BurstConfig struct {
 	TargetQueueName string `json:"targetQueueName,omitempty"`
 }
 
-// TargetConfig defines the scaling target configuration.
-type TargetConfig struct {
-	// ScaleTargetRef identifies the resource to scale.
-	// +required
-	ScaleTargetRef ScaleTargetRef `json:"scaleTargetRef"`
-
-	// MinReplicaCount is the minimum number of replicas.
-	// Defaults to 0.
-	// +optional
-	// +kubebuilder:validation:Minimum=0
-	MinReplicaCount *int32 `json:"minReplicaCount,omitempty"`
-
-	// MaxReplicaCount is the maximum number of replicas.
-	// Defaults to burst.count.
-	// +optional
-	// +kubebuilder:validation:Minimum=1
-	MaxReplicaCount *int32 `json:"maxReplicaCount,omitempty"`
-
-	// CooldownPeriod is the period to wait after the last trigger reported active before scaling to minReplicaCount.
-	// Defaults to 300 seconds.
-	// +optional
-	// +kubebuilder:validation:Minimum=0
-	CooldownPeriod *int32 `json:"cooldownPeriod,omitempty"`
-
-	// PollingInterval is the interval in seconds to check each trigger on.
-	// Defaults to 5 seconds.
-	// +optional
-	// +kubebuilder:validation:Minimum=1
-	PollingInterval *int32 `json:"pollingInterval,omitempty"`
-}
-
-// ScaleTargetRef identifies the resource to scale.
-type ScaleTargetRef struct {
-	// Name is the name of the resource to scale.
-	// +required
-	Name string `json:"name"`
-
-	// Kind is the kind of the resource to scale.
-	// Defaults to "Deployment".
-	// +optional
-	Kind string `json:"kind,omitempty"`
-
-	// APIVersion is the API version of the resource to scale.
-	// Defaults to "apps/v1".
-	// +optional
-	APIVersion string `json:"apiVersion,omitempty"`
-}
-
 // BurstScalerStatus defines the observed state of BurstScaler.
 type BurstScalerStatus struct {
 	// Conditions represent the current state of the BurstScaler.
@@ -187,7 +130,6 @@ const (
 	ConditionTypeReady           = "Ready"
 	ConditionTypeQueuesReady     = "QueuesReady"
 	ConditionTypeConsumerRunning = "ConsumerRunning"
-	ConditionTypeKEDAReady       = "KEDAReady"
 )
 
 // +kubebuilder:object:root=true
@@ -238,52 +180,4 @@ func (b *BurstScaler) GetTargetQueueName() string {
 		return b.Spec.Burst.TargetQueueName
 	}
 	return "burst-" + b.Name + "-target"
-}
-
-// GetScaleTargetKind returns the scale target kind, using default if not specified.
-func (b *BurstScaler) GetScaleTargetKind() string {
-	if b.Spec.Target.ScaleTargetRef.Kind != "" {
-		return b.Spec.Target.ScaleTargetRef.Kind
-	}
-	return "Deployment"
-}
-
-// GetScaleTargetAPIVersion returns the scale target API version, using default if not specified.
-func (b *BurstScaler) GetScaleTargetAPIVersion() string {
-	if b.Spec.Target.ScaleTargetRef.APIVersion != "" {
-		return b.Spec.Target.ScaleTargetRef.APIVersion
-	}
-	return "apps/v1"
-}
-
-// GetMinReplicaCount returns the min replica count, using default if not specified.
-func (b *BurstScaler) GetMinReplicaCount() int32 {
-	if b.Spec.Target.MinReplicaCount != nil {
-		return *b.Spec.Target.MinReplicaCount
-	}
-	return 0
-}
-
-// GetMaxReplicaCount returns the max replica count, using burst.count if not specified.
-func (b *BurstScaler) GetMaxReplicaCount() int32 {
-	if b.Spec.Target.MaxReplicaCount != nil {
-		return *b.Spec.Target.MaxReplicaCount
-	}
-	return b.Spec.Burst.Count
-}
-
-// GetCooldownPeriod returns the cooldown period, using default if not specified.
-func (b *BurstScaler) GetCooldownPeriod() int32 {
-	if b.Spec.Target.CooldownPeriod != nil {
-		return *b.Spec.Target.CooldownPeriod
-	}
-	return 300
-}
-
-// GetPollingInterval returns the polling interval, using default if not specified.
-func (b *BurstScaler) GetPollingInterval() int32 {
-	if b.Spec.Target.PollingInterval != nil {
-		return *b.Spec.Target.PollingInterval
-	}
-	return 5
 }

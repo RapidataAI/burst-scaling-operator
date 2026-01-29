@@ -88,11 +88,6 @@ var _ = Describe("BurstScaler Controller", func() {
 							Count:             10,
 							MessageTTLSeconds: 120,
 						},
-						Target: burstscalingv1alpha1.TargetConfig{
-							ScaleTargetRef: burstscalingv1alpha1.ScaleTargetRef{
-								Name: "test-deployment",
-							},
-						},
 					},
 				}
 				Expect(k8sClient.Create(ctx, resource)).To(Succeed())

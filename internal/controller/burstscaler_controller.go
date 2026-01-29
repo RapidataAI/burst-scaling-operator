@@ -33,8 +33,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	burstscalingv1alpha1 "github.com/rapidataai/burst-scaling-operator/api/v1alpha1"
-	"github.com/rapidataai/burst-scaling-operator/internal/keda"
-	kedav1alpha1 "github.com/rapidataai/burst-scaling-operator/internal/keda/api"
 	"github.com/rapidataai/burst-scaling-operator/internal/metrics"
 	"github.com/rapidataai/burst-scaling-operator/internal/rabbitmq"
 )
@@ -53,8 +51,6 @@ type BurstScalerReconciler struct {
 // +kubebuilder:rbac:groups=burstscaling.io,resources=burstscalers,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=burstscaling.io,resources=burstscalers/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=burstscaling.io,resources=burstscalers/finalizers,verbs=update
-// +kubebuilder:rbac:groups=keda.sh,resources=scaledobjects,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=keda.sh,resources=triggerauthentications,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources=events,verbs=create;patch
 // +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;watch;create;update;patch;delete
@@ -154,26 +150,6 @@ func (r *BurstScalerReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		Status:             metav1.ConditionTrue,
 		Reason:             "QueuesCreated",
 		Message:            fmt.Sprintf("Source queue %s and target queue %s created", sourceQueueName, targetQueueName),
-		ObservedGeneration: burstScaler.Generation,
-	})
-
-	// Create/update TriggerAuthentication
-	triggerAuthName := keda.TriggerAuthName(&burstScaler)
-	if err := r.reconcileTriggerAuthentication(ctx, &burstScaler); err != nil {
-		return r.setFailedCondition(ctx, &burstScaler, "TriggerAuthFailed", err.Error())
-	}
-
-	// Create/update ScaledObject
-	if err := r.reconcileScaledObject(ctx, &burstScaler, triggerAuthName); err != nil {
-		return r.setFailedCondition(ctx, &burstScaler, "ScaledObjectFailed", err.Error())
-	}
-
-	// Set KEDAReady condition
-	meta.SetStatusCondition(&burstScaler.Status.Conditions, metav1.Condition{
-		Type:               burstscalingv1alpha1.ConditionTypeKEDAReady,
-		Status:             metav1.ConditionTrue,
-		Reason:             "KEDAResourcesCreated",
-		Message:            "TriggerAuthentication and ScaledObject created",
 		ObservedGeneration: burstScaler.Generation,
 	})
 
@@ -293,82 +269,6 @@ func (r *BurstScalerReconciler) getSecretValue(ctx context.Context, namespace st
 	return string(value), nil
 }
 
-// reconcileTriggerAuthentication creates or updates the TriggerAuthentication.
-func (r *BurstScalerReconciler) reconcileTriggerAuthentication(ctx context.Context, bs *burstscalingv1alpha1.BurstScaler) error {
-	logger := log.FromContext(ctx)
-
-	desired := keda.BuildTriggerAuthentication(bs)
-
-	// Set owner reference
-	if err := controllerutil.SetControllerReference(bs, desired, r.Scheme); err != nil {
-		return fmt.Errorf("failed to set owner reference: %w", err)
-	}
-
-	// Check if it exists
-	var current kedav1alpha1.TriggerAuthentication
-	err := r.Get(ctx, types.NamespacedName{Name: desired.Name, Namespace: desired.Namespace}, &current)
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			// Create
-			if err := r.Create(ctx, desired); err != nil {
-				return fmt.Errorf("failed to create TriggerAuthentication: %w", err)
-			}
-			logger.Info("Created TriggerAuthentication", "name", desired.Name)
-			return nil
-		}
-		return fmt.Errorf("failed to get TriggerAuthentication: %w", err)
-	}
-
-	// Update if needed
-	if keda.TriggerAuthNeedsUpdate(&current, desired) {
-		keda.UpdateTriggerAuth(&current, desired)
-		if err := r.Update(ctx, &current); err != nil {
-			return fmt.Errorf("failed to update TriggerAuthentication: %w", err)
-		}
-		logger.Info("Updated TriggerAuthentication", "name", desired.Name)
-	}
-
-	return nil
-}
-
-// reconcileScaledObject creates or updates the ScaledObject.
-func (r *BurstScalerReconciler) reconcileScaledObject(ctx context.Context, bs *burstscalingv1alpha1.BurstScaler, triggerAuthName string) error {
-	logger := log.FromContext(ctx)
-
-	desired := keda.BuildScaledObject(bs, triggerAuthName)
-
-	// Set owner reference
-	if err := controllerutil.SetControllerReference(bs, desired, r.Scheme); err != nil {
-		return fmt.Errorf("failed to set owner reference: %w", err)
-	}
-
-	// Check if it exists
-	var current kedav1alpha1.ScaledObject
-	err := r.Get(ctx, types.NamespacedName{Name: desired.Name, Namespace: desired.Namespace}, &current)
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			// Create
-			if err := r.Create(ctx, desired); err != nil {
-				return fmt.Errorf("failed to create ScaledObject: %w", err)
-			}
-			logger.Info("Created ScaledObject", "name", desired.Name)
-			return nil
-		}
-		return fmt.Errorf("failed to get ScaledObject: %w", err)
-	}
-
-	// Update if needed
-	if keda.ScaledObjectNeedsUpdate(&current, desired) {
-		keda.UpdateScaledObject(&current, desired)
-		if err := r.Update(ctx, &current); err != nil {
-			return fmt.Errorf("failed to update ScaledObject: %w", err)
-		}
-		logger.Info("Updated ScaledObject", "name", desired.Name)
-	}
-
-	return nil
-}
-
 // setFailedCondition sets the Ready condition to False and updates the status.
 func (r *BurstScalerReconciler) setFailedCondition(ctx context.Context, bs *burstscalingv1alpha1.BurstScaler, reason, message string) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
@@ -400,8 +300,6 @@ func (r *BurstScalerReconciler) setFailedCondition(ctx context.Context, bs *burs
 func (r *BurstScalerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&burstscalingv1alpha1.BurstScaler{}).
-		Owns(&kedav1alpha1.ScaledObject{}).
-		Owns(&kedav1alpha1.TriggerAuthentication{}).
 		Named("burstscaler").
 		Complete(r)
 }

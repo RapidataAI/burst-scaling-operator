@@ -37,7 +37,6 @@ import (
 
 	burstscalingv1alpha1 "github.com/rapidataai/burst-scaling-operator/api/v1alpha1"
 	"github.com/rapidataai/burst-scaling-operator/internal/controller"
-	kedav1alpha1 "github.com/rapidataai/burst-scaling-operator/internal/keda/api"
 	"github.com/rapidataai/burst-scaling-operator/internal/rabbitmq"
 	// +kubebuilder:scaffold:imports
 )
@@ -51,7 +50,6 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
 	utilruntime.Must(burstscalingv1alpha1.AddToScheme(scheme))
-	utilruntime.Must(kedav1alpha1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 
