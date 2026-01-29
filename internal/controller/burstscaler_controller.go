@@ -115,7 +115,12 @@ func (r *BurstScalerReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	if err := rmqClient.Connect(ctx); err != nil {
 		return r.setFailedCondition(ctx, &burstScaler, "RabbitMQConnectionFailed", err.Error())
 	}
-	defer rmqClient.Close()
+	defer func(rmqClient *rabbitmq.Client) {
+		err := rmqClient.Close()
+		if err != nil {
+			logger.Error(err, "Failed to close RabbitMQ client")
+		}
+	}(rmqClient)
 
 	// Declare source queue
 	sourceQueueName := burstScaler.GetSourceQueueName()
@@ -235,7 +240,12 @@ func (r *BurstScalerReconciler) handleDeletion(ctx context.Context, bs *burstsca
 	if err == nil {
 		rmqClient := rabbitmq.NewClient(amqpURI)
 		if err := rmqClient.Connect(ctx); err == nil {
-			defer rmqClient.Close()
+			defer func(rmqClient *rabbitmq.Client) {
+				err := rmqClient.Close()
+				if err != nil {
+					logger.Error(err, "Failed to close RabbitMQ client")
+				}
+			}(rmqClient)
 
 			// Delete source queue
 			if bs.Status.SourceQueueName != "" {

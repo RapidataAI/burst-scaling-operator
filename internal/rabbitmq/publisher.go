@@ -33,7 +33,7 @@ func PublishBurst(ctx context.Context, ch *amqp.Channel, targetQueueName string,
 	timestamp := time.Now().UTC().Format(time.RFC3339Nano)
 	body := []byte(timestamp)
 
-	for i := int32(0); i < count; i++ {
+	for i := range count {
 		err := ch.PublishWithContext(
 			ctx,
 			"",              // exchange (default exchange)
@@ -66,13 +66,23 @@ func PublishBurstWithConnection(ctx context.Context, amqpURI, targetQueueName st
 	if err != nil {
 		return fmt.Errorf("failed to connect: %w", err)
 	}
-	defer conn.Close()
+	defer func(conn *amqp.Connection) {
+		err := conn.Close()
+		if err != nil {
+			fmt.Printf("Failed to close connection: %v\n", err)
+		}
+	}(conn)
 
 	ch, err := conn.Channel()
 	if err != nil {
 		return fmt.Errorf("failed to open channel: %w", err)
 	}
-	defer ch.Close()
+	defer func(ch *amqp.Channel) {
+		err := ch.Close()
+		if err != nil {
+			fmt.Printf("Failed to close channel: %v\n", err)
+		}
+	}(ch)
 
 	return PublishBurst(ctx, ch, targetQueueName, count)
 }

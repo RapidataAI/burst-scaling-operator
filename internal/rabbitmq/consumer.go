@@ -180,13 +180,23 @@ func (m *ConsumerManager) consumeMessages(ctx context.Context, key types.Namespa
 	if err != nil {
 		return fmt.Errorf("failed to connect: %w", err)
 	}
-	defer conn.Close()
+	defer func(conn *amqp.Connection) {
+		err := conn.Close()
+		if err != nil {
+			fmt.Printf("Failed to close connection: %v\n", err)
+		}
+	}(conn)
 
 	ch, err := conn.Channel()
 	if err != nil {
 		return fmt.Errorf("failed to open channel: %w", err)
 	}
-	defer ch.Close()
+	defer func(ch *amqp.Channel) {
+		err := ch.Close()
+		if err != nil {
+			fmt.Printf("Failed to close channel: %v\n", err)
+		}
+	}(ch)
 
 	// Set QoS to process one message at a time
 	err = ch.Qos(1, 0, false)

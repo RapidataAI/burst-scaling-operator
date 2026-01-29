@@ -17,6 +17,8 @@ limitations under the License.
 package keda
 
 import (
+	"maps"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	burstscalingv1alpha1 "github.com/rapidataai/burst-scaling-operator/api/v1alpha1"
@@ -92,7 +94,5 @@ func UpdateTriggerAuth(current, desired *kedav1alpha1.TriggerAuthentication) {
 	if current.Labels == nil {
 		current.Labels = make(map[string]string)
 	}
-	for k, v := range desired.Labels {
-		current.Labels[k] = v
-	}
+	maps.Copy(current.Labels, desired.Labels)
 }

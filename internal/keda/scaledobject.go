@@ -18,6 +18,7 @@ package keda
 
 import (
 	"fmt"
+	"maps"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -147,9 +148,7 @@ func UpdateScaledObject(current, desired *kedav1alpha1.ScaledObject) {
 	if current.Labels == nil {
 		current.Labels = make(map[string]string)
 	}
-	for k, v := range desired.Labels {
-		current.Labels[k] = v
-	}
+	maps.Copy(current.Labels, desired.Labels)
 }
 
 func int32PtrEqual(a, b *int32) bool {

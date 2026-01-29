@@ -18,6 +18,7 @@ package rabbitmq
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -109,7 +110,12 @@ func (c *Client) DeclareSourceQueue(ctx context.Context, cfg SourceQueueConfig) 
 	if err != nil {
 		return err
 	}
-	defer ch.Close()
+	defer func(ch *amqp.Channel) {
+		err := ch.Close()
+		if err != nil {
+			fmt.Printf("Failed to close channel: %v\n", err)
+		}
+	}(ch)
 
 	// Declare the queue as durable
 	_, err = ch.QueueDeclare(
@@ -159,7 +165,12 @@ func (c *Client) DeclareTargetQueue(ctx context.Context, cfg TargetQueueConfig) 
 	if err != nil {
 		return err
 	}
-	defer ch.Close()
+	defer func(ch *amqp.Channel) {
+		err := ch.Close()
+		if err != nil {
+			fmt.Printf("Failed to close channel: %v\n", err)
+		}
+	}(ch)
 
 	args := amqp.Table{
 		"x-max-length":  cfg.MaxLength,
@@ -178,7 +189,8 @@ func (c *Client) DeclareTargetQueue(ctx context.Context, cfg TargetQueueConfig) 
 	)
 	if err != nil {
 		// If queue exists with different arguments, delete and recreate
-		if amqpErr, ok := err.(*amqp.Error); ok && amqpErr.Code == amqp.PreconditionFailed {
+		var amqpErr *amqp.Error
+		if errors.As(err, &amqpErr) && amqpErr.Code == amqp.PreconditionFailed {
 			logger.Info("Target queue exists with different arguments, recreating",
 				"queue", cfg.QueueName)
 
@@ -187,7 +199,12 @@ func (c *Client) DeclareTargetQueue(ctx context.Context, cfg TargetQueueConfig) 
 			if err2 != nil {
 				return fmt.Errorf("failed to get channel for queue deletion: %w", err2)
 			}
-			defer ch2.Close()
+			defer func(ch2 *amqp.Channel) {
+				err := ch2.Close()
+				if err != nil {
+					fmt.Printf("Failed to close channel: %v\n", err)
+				}
+			}(ch2)
 
 			// Delete the existing queue
 			_, err2 = ch2.QueueDelete(cfg.QueueName, false, false, false)
@@ -207,8 +224,6 @@ func (c *Client) DeclareTargetQueue(ctx context.Context, cfg TargetQueueConfig) 
 			if err2 != nil {
 				return fmt.Errorf("failed to recreate target queue %s: %w", cfg.QueueName, err2)
 			}
-		} else {
-			return fmt.Errorf("failed to declare target queue %s: %w", cfg.QueueName, err)
 		}
 	}
 
@@ -228,12 +243,18 @@ func (c *Client) DeleteQueue(ctx context.Context, queueName string) error {
 	if err != nil {
 		return err
 	}
-	defer ch.Close()
+	defer func(ch *amqp.Channel) {
+		err := ch.Close()
+		if err != nil {
+			fmt.Printf("Failed to close channel: %v\n", err)
+		}
+	}(ch)
 
 	_, err = ch.QueueDelete(queueName, false, false, false)
 	if err != nil {
 		// Ignore "not found" errors during cleanup
-		if amqpErr, ok := err.(*amqp.Error); ok && amqpErr.Code == amqp.NotFound {
+		var amqpErr *amqp.Error
+		if errors.As(err, &amqpErr) && amqpErr.Code == amqp.NotFound {
 			logger.V(1).Info("Queue already deleted or doesn't exist", "queue", queueName)
 			return nil
 		}
@@ -251,7 +272,7 @@ func (c *Client) ConnectWithRetry(ctx context.Context, maxRetries int) error {
 	backoff := time.Second
 	maxBackoff := 30 * time.Second
 
-	for i := 0; i < maxRetries; i++ {
+	for i := range maxRetries {
 		err := c.Connect(ctx)
 		if err == nil {
 			return nil
